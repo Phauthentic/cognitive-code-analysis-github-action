@@ -8,12 +8,23 @@ build_config_args() {
     fi
 }
 
+build_analyse_path() {
+    local path
+    ANALYSE_PATH=""
+
+    for path in ${CHANGED_FILES}; do
+        if [[ -n "${ANALYSE_PATH}" ]]; then
+            ANALYSE_PATH+=","
+        fi
+        ANALYSE_PATH+="${path}"
+    done
+}
+
 run_analyse() {
     local report_type="$1"
     local report_file="$2"
 
-    # shellcheck disable=SC2086
-    php "${PHPCCA_BIN}" analyse ${CHANGED_FILES} \
+    php "${PHPCCA_BIN}" analyse "${ANALYSE_PATH}" \
         --report-type="${report_type}" \
         --report-file="${report_file}" \
         "${CONFIG_ARGS[@]}"
@@ -25,6 +36,7 @@ needs_markdown_report() {
 
 run_all_analyses() {
     build_config_args
+    build_analyse_path
 
     export REPORT_PATH=""
     export SARIF_PATH=""
