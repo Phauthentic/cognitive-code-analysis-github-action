@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: Phauthentic/cca-gh-action@v1
+      - uses: Phauthentic/cognitive-code-analysis-github-action@v1
         with:
           install-mode: phar
           phar-version: '1.11.0'

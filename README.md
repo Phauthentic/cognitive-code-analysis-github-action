@@ -2,6 +2,8 @@
 
 Composite GitHub Action that runs [Cognitive Code Analysis](https://github.com/Phauthentic/cognitive-code-analysis) (`phpcca`) in pull-request workflows. Install via PHAR or Composer, analyse changed PHP files, and optionally publish Markdown PR comments, workflow annotations, artifacts, and SARIF uploads.
 
+**Repository:** [Phauthentic/cognitive-code-analysis-github-action](https://github.com/Phauthentic/cognitive-code-analysis-github-action)
+
 This repository is separate from the main `cognitive-code-analysis` package ([issue #29](https://github.com/Phauthentic/cognitive-code-analysis/issues/29)).
 
 ## Quick start
@@ -28,7 +30,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: Phauthentic/cca-gh-action@v1
+      - uses: Phauthentic/cognitive-code-analysis-github-action@v1
         with:
           install-mode: phar
           post-comment: true
@@ -85,7 +87,7 @@ permissions:
 Downloads `phpcca.phar` from [GitHub Releases](https://github.com/Phauthentic/cognitive-code-analysis/releases). No Composer install step required in your workflow.
 
 ```yaml
-- uses: Phauthentic/cca-gh-action@v1
+- uses: Phauthentic/cognitive-code-analysis-github-action@v1
   with:
     install-mode: phar
     phar-version: '1.11.0'
@@ -103,7 +105,7 @@ Install dependencies first, then point the action at your binary:
 
 - run: composer install --prefer-dist --no-ansi --no-interaction --no-progress
 
-- uses: Phauthentic/cca-gh-action@v1
+- uses: Phauthentic/cognitive-code-analysis-github-action@v1
   with:
     install-mode: composer
     composer-command: vendor/bin/phpcca
@@ -128,16 +130,22 @@ See [`examples/minimal.yml`](examples/minimal.yml) for a PHAR workflow with PR c
 
 ### Local / path reference
 
-Test the action from a branch before publishing:
+Pin a stable release (recommended):
 
 ```yaml
-- uses: Phauthentic/cca-gh-action@main
+- uses: Phauthentic/cognitive-code-analysis-github-action@v1
+```
+
+Test the action from the default branch before a release:
+
+```yaml
+- uses: Phauthentic/cognitive-code-analysis-github-action@master
 ```
 
 Or reference a checkout of this repo:
 
 ```yaml
-- uses: ./path/to/cca-gh-actions
+- uses: ./path/to/cognitive-code-analysis-github-action
   with:
     analyze-changed-files-only: 'false'
     paths: src/
