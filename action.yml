@@ -1,0 +1,147 @@
+name: Cognitive Code Analysis
+description: Run phpcca cognitive complexity analysis on pull requests with configurable reports, annotations, and artifacts.
+branding:
+  icon: search
+  color: blue
+
+inputs:
+  install-mode:
+    description: Install phpcca via PHAR download or use an existing Composer binary.
+    required: false
+    default: phar
+  phar-version:
+    description: Release tag to download when install-mode is phar.
+    required: false
+    default: '1.11.0'
+  phar-url:
+    description: Override PHAR download URL (for forks or testing).
+    required: false
+    default: ''
+  composer-command:
+    description: Path to phpcca when install-mode is composer.
+    required: false
+    default: vendor/bin/phpcca
+  config:
+    description: Config file path. Leave empty to auto-discover cca.yaml in the working directory.
+    required: false
+    default: ''
+  php-version:
+    description: PHP version for shivammathur/setup-php.
+    required: false
+    default: '8.4'
+  analyze-changed-files-only:
+    description: Analyse only PHP files changed in the pull request. On push events, falls back to paths.
+    required: false
+    default: 'true'
+  paths:
+    description: Space-separated paths to analyse when not using changed-files mode or on push events.
+    required: false
+    default: src
+  post-comment:
+    description: Post the Markdown report as a pull request comment.
+    required: false
+    default: 'true'
+  upload-artifact:
+    description: Upload report files as a workflow artifact.
+    required: false
+    default: 'true'
+  artifact-name:
+    description: Name of the uploaded artifact.
+    required: false
+    default: cca-report
+  emit-annotations:
+    description: Emit GitHub Actions workflow annotations to the log.
+    required: false
+    default: 'true'
+  upload-sarif:
+    description: Generate SARIF and upload to GitHub Code Scanning.
+    required: false
+    default: 'false'
+  fail-on-threshold:
+    description: Fail the job when methods exceed the configured threshold (via JUnit report).
+    required: false
+    default: 'false'
+  token:
+    description: GitHub token for PR comments and SARIF upload.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  has-report:
+    description: Whether a report was generated.
+    value: ${{ steps.run.outputs.has-report }}
+  changed-files-count:
+    description: Number of PHP files analysed.
+    value: ${{ steps.run.outputs.changed-files-count }}
+  report-path:
+    description: Path to the Markdown report file, if generated.
+    value: ${{ steps.run.outputs.report-path }}
+  sarif-path:
+    description: Path to the SARIF report file, if generated.
+    value: ${{ steps.run.outputs.sarif-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ inputs.php-version }}
+        extensions: json, fileinfo
+
+    - name: Run Cognitive Code Analysis
+      id: run
+      shell: bash
+      run: bash "${{ github.action_path }}/scripts/run.sh"
+      env:
+        INPUT_INSTALL_MODE: ${{ inputs.install-mode }}
+        INPUT_PHAR_VERSION: ${{ inputs.phar-version }}
+        INPUT_PHAR_URL: ${{ inputs.phar-url }}
+        INPUT_COMPOSER_COMMAND: ${{ inputs.composer-command }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_ANALYZE_CHANGED_FILES_ONLY: ${{ inputs.analyze-changed-files-only }}
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_POST_COMMENT: ${{ inputs.post-comment }}
+        INPUT_UPLOAD_ARTIFACT: ${{ inputs.upload-artifact }}
+        INPUT_EMIT_ANNOTATIONS: ${{ inputs.emit-annotations }}
+        INPUT_UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        INPUT_FAIL_ON_THRESHOLD: ${{ inputs.fail-on-threshold }}
+        GITHUB_EVENT_PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
+    - name: Post PR comment
+      if: inputs.post-comment == 'true' && steps.run.outputs.has-report == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      env:
+        REPORT_PATH: ${{ steps.run.outputs.report-path }}
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          const fs = require('fs');
+          const reportPath = process.env.REPORT_PATH || 'cca-report.md';
+          const report = fs.readFileSync(reportPath, 'utf8');
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: report
+          });
+
+    - name: Upload report artifact
+      if: inputs.upload-artifact == 'true' && steps.run.outputs.has-report == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ steps.run.outputs.report-path }}
+          cca-annotations.txt
+          cca-junit.xml
+        if-no-files-found: ignore
+
+    - name: Upload SARIF
+      if: inputs.upload-sarif == 'true' && steps.run.outputs.sarif-path != ''
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ steps.run.outputs.sarif-path }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}

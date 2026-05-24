@@ -1,0 +1,5 @@
+cognitive:
+  scoreThreshold: 15
+  showOnlyMethodsExceedingThreshold: false
+  cache:
+    enabled: false

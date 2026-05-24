@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Shellcheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: scripts
+
+  dogfood:
+    name: Dogfood action
+    runs-on: ubuntu-24.04
+    needs: shellcheck
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run local action (PHAR mode)
+        uses: ./
+        with:
+          install-mode: phar
+          phar-version: '1.11.0'
+          analyze-changed-files-only: 'false'
+          paths: fixtures/
+          config: fixtures/cca.yaml
+          post-comment: false
+          upload-artifact: true
+          artifact-name: cca-dogfood-report
+          emit-annotations: true
+          upload-sarif: false
+          fail-on-threshold: false

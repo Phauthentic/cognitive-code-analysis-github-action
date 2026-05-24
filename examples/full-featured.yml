@@ -1,0 +1,35 @@
+name: Cognitive Code Analysis
+
+on:
+  pull_request:
+    paths:
+      - '**/*.php'
+
+permissions:
+  pull-requests: write
+  contents: read
+  security-events: write
+
+jobs:
+  analyse:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: Phauthentic/cca-gh-action@v1
+        with:
+          install-mode: phar
+          phar-version: '1.11.0'
+          php-version: '8.4'
+          config: cca.yaml
+          analyze-changed-files-only: true
+          paths: src
+          post-comment: true
+          upload-artifact: true
+          artifact-name: cca-report
+          emit-annotations: true
+          upload-sarif: true
+          fail-on-threshold: false
+          token: ${{ github.token }}
